@@ -18,108 +18,149 @@
 
 <script>
     
-    function init() {
-        
-        var scene = new THREE.Scene();
-        // Creates new Scene object
-        
-        var box = getBox(1, 1, 1);
-        // This calls the function below called getBox, and takes three arguments.
-        
-        var plane = getPlane(4)
-        // This calls the function below called getPlane, and 1 argument, which is used twice (size and size).
-              
-        box.position.y = box.geometry.parameters.height/2;
-        // This moves the box above the plane object
-        
-        plane.rotation.x = Math.PI/2;
-        // Rotates var plane on a 90degree axis - it does this on radians though, not degrees
-        // Therefore, we cannot do plane.rotation.x = 90
-        
-        scene.add(box);
-        // This adds var box to the scene object
-        scene.add(plane);
-        // This adds var plane to the scene object
-        
-        
-        var camera = new THREE.PerspectiveCamera (
-            45, // Field of view
-            window.innerWidth/window.innerHeight, // Aspect ratio
-            1, // Near clipping plane
-            1000 // Far clipping plane
-        );
-        // Creates Camera object which deals with perspective in a 3D plane.
-        
-        camera.position.z = 5;
-        // This sets the Z position of the camera. 1 would put this level with the 1 used for depth in var box. Therefore, nothing would be viewable. Anything above 1 will fix that. The higher you go, the smaller the box will look, as the 'camera' is getting further and further away. 
-        camera.position.x = 1;
-        camera.position.y = 1;
-        // This position the camera on the x and y axis
-        
-        
-        camera.lookAt(new THREE.Vector3(0, 0, 1));
-        // vector - A vector representing a position in world space. Rotates the object to face a point in world space.
-        
-        var renderer = new THREE.WebGLRenderer();
-        // Chooses a renderer (there are other options besides WebGL)
-                
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        // Sets the size of the display for the renderer
-        
-        document.getElementById('webgl').appendChild(renderer.domElement);
-        // Attaches the renderer to the object in the HTML document with the chosen ID, in this case, it's <div id="webgl">
-        
-        renderer.render(scene, camera);
-        // Renders the renderer with a scene and a camera, based on the variable choices above
-    }
+function init() {
 
+    var scene = new THREE.Scene();
+    // Creates new Scene object
+
+    var box = getBox(1, 1, 1);
+    // This calls the function below called getBox, and takes three arguments.
+    box.name = ('box-1');
+    // giving the box a name allows us to reference the object when creating animations
+    // We call box-1 as follows: var box = scene.getObjectByName('box-1');
+
+    var plane = getPlane(4)
+    // This calls the function below called getPlane, and 1 argument, which is used twice (size and size).
+    plane.name = ('plane-1');
+    // giving the box a plane allows us to reference the object when creating animations.
+
+    box.position.y = box.geometry.parameters.height/2;
+    // This moves the box above the plane object
+
+    plane.rotation.x = Math.PI/2;
+    // Rotates var plane on a 90degree axis - it does this on radians though, not degrees
+    // Therefore, we cannot do plane.rotation.x = 90
+
+    scene.add(box);
+    // This adds var box to the scene object
+    scene.add(plane);
+    // This adds var plane to the scene object
+
+
+    var camera = new THREE.PerspectiveCamera (
+        45, // Field of view
+        window.innerWidth/window.innerHeight, // Aspect ratio
+        1, // Near clipping plane
+        1000 // Far clipping plane
+    );
+    // Creates Camera object which deals with perspective in a 3D plane.
+
+    camera.position.z = 5;
+    // This sets the Z position of the camera. 1 would put this level with the 1 used for depth in var box. Therefore, nothing would be viewable. Anything above 1 will fix that. The higher you go, the smaller the box will look, as the 'camera' is getting further and further away.
+    camera.position.x = 1;
+    camera.position.y = 1;
+    // This position the camera on the x and y axis
+
+
+    camera.lookAt(new THREE.Vector3(0, 0, 1));
+    // vector - A vector representing a position in world space. Rotates the object to face a point in world space.
+
+    var renderer = new THREE.WebGLRenderer();
+    // Chooses a renderer (there are other options besides WebGL)
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    // Sets the size of the display for the renderer
+
+    document.getElementById('webgl').appendChild(renderer.domElement);
+    // Attaches the renderer to the object in the HTML document with the chosen ID, in this case, it's <div id="webgl">
+
+    update(renderer, scene, camera);
+    // Renders the renderer with a scene and a camera, based on the variable choices above. This allows for the animation to take place by calling the update function below
+
+    return scene;
+}
+
+
+// Creates shape (in this case, a cube)
+function getBox(width, height, depth) {
+
+    var geometry = new THREE.BoxGeometry(
+        width, // Width
+        height, // Height
+        depth  // Depth
+    );
+    // Creates an shape
+
+    var material = new THREE.MeshBasicMaterial(
+        {color: 0xff0000}
+    );
+    // Creates a material which will then be given to the shape made in var geometry
+
+    var mesh = new THREE.Mesh(geometry, material);
+    // Pass in the geometry and the material as arguments
+
+    return mesh;
+}
     
-    function getBox(width, height, depth) {
-       
-        var geometry = new THREE.BoxGeometry(
-            width, // Width
-            height, // Height
-            depth  // Depth
-        );
-        // Creates an shape
-        
-        var material = new THREE.MeshBasicMaterial(
-            {color: 0xff0000}
-        );
-        // Creates a material which will then be given to the shape made in var geometry 
-        
-        var mesh = new THREE.Mesh(geometry, material);
-        // Pass in the geometry and the material as arguments
-     
-        return mesh;
-    }
-    
-        
-        function getPlane(size) {
-       
-        var geometry = new THREE.PlaneGeometry(
-            size, // Width
-            size, // Height
-        );
-        // Creates an shape
-        
-        var material = new THREE.MeshBasicMaterial(
-            {
-                color: 0xffffff,
-                side: THREE.DoubleSide
-            }
-        );
-        // Creates a material which will then be given to the shape made in var geometry 
-        
-        var mesh = new THREE.Mesh(geometry, material);
-        // Pass in the geometry and the material as arguments
-     
-        return mesh;
-    }
+
+
+// Creates plane (floor of scene)
+function getPlane(size) {
+
+    var geometry = new THREE.PlaneGeometry(
+        size, // Width
+        size, // Height
+    );
+    // Creates an shape
+
+    var material = new THREE.MeshBasicMaterial(
+        {
+            color: 0xffffff,
+            side: THREE.DoubleSide
+        }
+    );
+    // Creates a material which will then be given to the shape made in var geometry
+
+    var mesh = new THREE.Mesh(geometry, material);
+    // Pass in the geometry and the material as arguments
+
+return mesh;
+}
     
     
-    init();
-    // Executes everything above
+
+// Allows for continuous rendering at 60fps;
+function update(renderer, scene, camera) {
+    renderer.render(
+        scene,
+        camera
+    );
+
+    /*
+    var plane = scene.getObjectByName('plane-1');
+    plane.rotation.y += 1;
+
+    var box = scene.getObjectByName('box-1');
+    box.rotation.x -= .1;
+    */
+    // These two bits animate the plane and the box.
+
+
+    requestAnimationFrame(function() {
+        update(renderer, scene, camera);
+    })
+
+
+
+}
+
+
+
+
+
+var scene = init();
+// Executes everything above
+
 </script>
 
 
