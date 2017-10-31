@@ -15,7 +15,8 @@
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>    
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.5/dat.gui.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
 <script>
     
 function init() {
@@ -23,29 +24,89 @@ function init() {
     var scene = new THREE.Scene();
     // Creates new Scene object
 
-    var box = getBox(1, 1, 1);
-    // This calls the function below called getBox, and takes three arguments.
-    box.name = ('box-1');
-    // giving the box a name allows us to reference the object when creating animations
+    var gui = new dat.GUI();
+    // Creates the real-time manipulation dat.GUI
+
+
+
+
+
+
     // We call box-1 as follows: var box = scene.getObjectByName('box-1');
 
-    var plane = getPlane(4)
+    var plane = getPlane(50)
     // This calls the function below called getPlane, and 1 argument, which is used twice (size and size).
-    plane.name = ('plane-1');
-    // giving the box a plane allows us to reference the object when creating animations.
 
-    box.position.y = box.geometry.parameters.height/2;
+    var directionalLight = getDirectionalLight(1);
+
+    var ambientLight = getAmbientLight(1);
+
+    var sphere = getSphere(0.25);
+
+
+    var boxGrid = getBoxGrid(10, 1.5);
     // This moves the box above the plane object
+
+    boxGrid.name = 'boxGrid';
+
+    var helper = new THREE.CameraHelper(directionalLight.shadow.camera);
 
     plane.rotation.x = Math.PI/2;
     // Rotates var plane on a 90degree axis - it does this on radians though, not degrees
     // Therefore, we cannot do plane.rotation.x = 90
 
-    scene.add(box);
+    directionalLight.position.x = 13;
+    directionalLight.position.y = 10;
+    directionalLight.position.z = 10;
+    directionalLight.intensity = 2;
+
+    //gui.add allows you to add sliders into the browser page for manipulating values in real-time
+    gui.add(
+        directionalLight, // what object you want to contol
+        'intensity', // what object value you want to control
+        0,  //the minimum range
+        5 //the maximum range
+    );
+
+    gui.add(
+        directionalLight.position, // what object you want to contol
+        'z', // what object value you want to control
+        0,  //the minimum range
+        5 //the maximum range
+    );
+
+    gui.add(
+        directionalLight.position, // what object you want to contol
+        'y', // what object value you want to control
+        0,  //the minimum range
+        20 //the maximum range
+    );
+
+    gui.add(
+        directionalLight.position, // what object you want to contol
+        'x', // what object value you want to control
+        0,  //the minimum range
+        20 //the maximum range
+    );
+
+/*
+    gui.add(
+        directionalLight, // what object you want to contol
+        'penumbra', // what object value you want to control
+        0,  //the minimum range
+        1 //the maximum range
+    );
+*/
+
     // This adds var box to the scene object
     scene.add(plane);
     // This adds var plane to the scene object
-
+    directionalLight.add(sphere);
+    scene.add(directionalLight);
+    // This adds var directionalLight to the scene object
+    scene.add(boxGrid);
+    scene.add(helper);
+    scene.add(ambientLight);
 
     var camera = new THREE.PerspectiveCamera (
         45, // Field of view
@@ -57,8 +118,8 @@ function init() {
 
     camera.position.z = 5;
     // This sets the Z position of the camera. 1 would put this level with the 1 used for depth in var box. Therefore, nothing would be viewable. Anything above 1 will fix that. The higher you go, the smaller the box will look, as the 'camera' is getting further and further away.
-    camera.position.x = 1;
-    camera.position.y = 1;
+    camera.position.x = 2;
+    camera.position.y = 2.5;
     // This position the camera on the x and y axis
 
 
@@ -68,13 +129,21 @@ function init() {
     var renderer = new THREE.WebGLRenderer();
     // Chooses a renderer (there are other options besides WebGL)
 
+    renderer.shadowMap.enabled = true;
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     // Sets the size of the display for the renderer
+    renderer.setClearColor('rgb(100, 100 , 100)');
+    // Sets the background color
 
     document.getElementById('webgl').appendChild(renderer.domElement);
     // Attaches the renderer to the object in the HTML document with the chosen ID, in this case, it's <div id="webgl">
 
-    update(renderer, scene, camera);
+
+    var controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+
+    update(renderer, scene, camera, controls);
     // Renders the renderer with a scene and a camera, based on the variable choices above. This allows for the animation to take place by calling the update function below
 
     return scene;
@@ -91,18 +160,68 @@ function getBox(width, height, depth) {
     );
     // Creates an shape
 
-    var material = new THREE.MeshBasicMaterial(
-        {color: 0xff0000}
+    var material = new THREE.MeshPhongMaterial(
+        {color: 'rgb(255,255,255)'}
     );
     // Creates a material which will then be given to the shape made in var geometry
 
     var mesh = new THREE.Mesh(geometry, material);
     // Pass in the geometry and the material as arguments
 
+    mesh.castShadow = true;
+
     return mesh;
 }
-    
 
+
+// creates multiples of the box
+function getBoxGrid(amount, separationMultiplier) {
+    var group = new THREE.Group();
+
+    for (var i=0; i<amount; i++) {
+        var obj = getBox(1, 1, 1);
+        obj.position.x = i * separationMultiplier;
+        obj.position.y = obj.geometry.parameters.height/2;
+        group.add(obj);
+        for (var j=1; j<amount; j++) {
+            var obj = getBox(1, 1, 1);
+            obj.position.x = i * separationMultiplier;
+            obj.position.y = obj.geometry.parameters.height / 2;
+            obj.position.z = j * separationMultiplier;
+            group.add(obj);
+        }
+    }
+
+    group.position.x = - (separationMultiplier * (amount-1))/2;
+    group.position.z = - (separationMultiplier * (amount-1))/2;
+
+    return group;
+}
+
+
+
+// Creates shape (in this case, a cube)
+function getSphere(size) {
+
+    var geometry = new THREE.SphereGeometry(
+        size,
+        24, //width
+        24 //height
+    );
+
+    // Creates an shape
+
+    var material = new THREE.MeshBasicMaterial(
+        {color: 'rgb(255,0,0)'}
+    );
+    // Creates a material which will then be given to the shape made in var geometry
+
+    var mesh = new THREE.Mesh(geometry, material);
+    // Pass in the geometry and the material as arguments
+
+
+    return mesh;
+}
 
 // Creates plane (floor of scene)
 function getPlane(size) {
@@ -113,9 +232,9 @@ function getPlane(size) {
     );
     // Creates an shape
 
-    var material = new THREE.MeshBasicMaterial(
+    var material = new THREE.MeshPhongMaterial(
         {
-            color: 0xffffff,
+            color: 'rgb(120,120,120)',
             side: THREE.DoubleSide
         }
     );
@@ -124,13 +243,61 @@ function getPlane(size) {
     var mesh = new THREE.Mesh(geometry, material);
     // Pass in the geometry and the material as arguments
 
+    mesh.receiveShadow = true;
+
 return mesh;
 }
     
-    
+
+
+function getPointLight(intensity) {
+    var light = new THREE.PointLight(0xffffff, intensity);
+
+    light.castShadow = true;
+
+    return light;
+}
+
+
+
+
+function getSpotLight(intensity) {
+    var light = new THREE.SpotLight(0xffffff, intensity);
+
+    light.castShadow = true;
+
+    light.shadow.bias = 0.001;
+    light.shadow.mapSize.width = 2048;
+    light.shadow.mapSize.height = 2048;
+
+    return light;
+}
+
+
+function getDirectionalLight(intensity) {
+    var light = new THREE.DirectionalLight(0xffffff, intensity);
+
+    light.castShadow = true;
+
+    light.shadow.camera.left = -10;
+    light.shadow.camera.bottom = -10;
+    light.shadow.camera.right = 10;
+    light.shadow.camera.top = 10;
+
+
+    return light;
+}
+
+
+function getAmbientLight(intensity) {
+    var light = new THREE.AmbientLight(0x3377ff, intensity);
+
+    return light;
+}
+
 
 // Allows for continuous rendering at 60fps;
-function update(renderer, scene, camera) {
+function update(renderer, scene, camera, controls) {
     renderer.render(
         scene,
         camera
@@ -144,10 +311,10 @@ function update(renderer, scene, camera) {
     box.rotation.x -= .1;
     */
     // These two bits animate the plane and the box.
-
+    controls.update();
 
     requestAnimationFrame(function() {
-        update(renderer, scene, camera);
+        update(renderer, scene, camera, controls);
     })
 
 
