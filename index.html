@@ -17,6 +17,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>    
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.5/dat.gui.min.js"></script>
 <script src="lib/OrbitControls.js"></script>
+<script src="lib/perlin.js"></script>
+<script src="lib/Tween.min.js"></script>
+
+
+
 <script>
     
 function init() {
@@ -27,10 +32,12 @@ function init() {
     var gui = new dat.GUI();
     // Creates the real-time manipulation dat.GUI
 
+    var clock = new THREE.Clock();
 
-
-
-
+    var enableFog = true;
+    if (enableFog) {
+        scene.fog = new THREE.FogExp2(0xffffff, 0.01);
+    }
 
     // We call box-1 as follows: var box = scene.getObjectByName('box-1');
 
@@ -43,10 +50,10 @@ function init() {
 
     var sphere = getSphere(0.25);
 
-
-    var boxGrid = getBoxGrid(10, 1.5);
+    var boxGrid = getBoxGrid(20, 1.5);
     // This moves the box above the plane object
 
+    plane.name = 'plane-1';
     boxGrid.name = 'boxGrid';
 
     var helper = new THREE.CameraHelper(directionalLight.shadow.camera);
@@ -105,7 +112,7 @@ function init() {
     scene.add(directionalLight);
     // This adds var directionalLight to the scene object
     scene.add(boxGrid);
-    scene.add(helper);
+    // scene.add(helper);
     scene.add(ambientLight);
 
     var camera = new THREE.PerspectiveCamera (
@@ -116,12 +123,63 @@ function init() {
     );
     // Creates Camera object which deals with perspective in a 3D plane.
 
-    camera.position.z = 5;
-    // This sets the Z position of the camera. 1 would put this level with the 1 used for depth in var box. Therefore, nothing would be viewable. Anything above 1 will fix that. The higher you go, the smaller the box will look, as the 'camera' is getting further and further away.
-    camera.position.x = 2;
-    camera.position.y = 2.5;
-    // This position the camera on the x and y axis
 
+    var cameraZRotation = new THREE.Group();
+    var cameraYPosition = new THREE.Group();
+    var cameraZPosition = new THREE.Group();
+    var cameraXRotation = new THREE.Group();
+    var cameraYRotation = new THREE.Group();
+
+    cameraZRotation.name = 'cameraZRotation';
+    cameraYPosition.name = 'cameraYPosition';
+    cameraZPosition.name = 'cameraZPosition';
+    cameraXRotation.name = 'cameraXRotation';
+    cameraYRotation.name = 'cameraYRotation';
+
+    cameraZRotation.add(camera);
+    cameraYPosition.add(cameraZRotation);
+    cameraZPosition.add(cameraYPosition);
+    cameraXRotation.add(cameraZPosition);
+    cameraYRotation.add(cameraXRotation);
+    scene.add(cameraYRotation);
+
+    cameraXRotation.rotation.x = -Math.PI/2;
+    cameraYPosition.position.y = 1;
+    cameraZPosition.position.z = 100;
+
+    gui.add(cameraZPosition.position, 'z', 0, 100);
+    gui.add(cameraYRotation.rotation, 'y', -Math.PI, Math.PI);
+    gui.add(cameraXRotation.rotation, 'x', -Math.PI, Math.PI);
+    gui.add(cameraZRotation.rotation, 'z', -Math.PI, Math.PI);
+
+
+    new TWEEN.Tween({val: 100}) //instatiates a new Tween object and passes in a starting value.
+    // The use of the word 'val' is arbitrary, anything could have been put here as long as it is consistent
+        .to({val: 0}, 12000) // this is the value that val to end on. The second argument here is how long the animation will take, in ms
+        .onUpdate(function() { // this is where we tell the object that we want to manipulate something
+            cameraZPosition.position.z = this.val; // and this is where we choose what we want to manipulate
+        })
+        .start(); //and this fires the function
+
+    new TWEEN.Tween({val: -Math.PI/2})
+        .to({val: 0}, 6000)
+        .delay(1000)
+        .easing(TWEEN.Easing.Quadratic.InOut) //You can add easing functions simply by chaining them in, as demonstrated here
+        // - there's loads more easing options available - look up TWEEN documentation for this
+        .onUpdate(function() {
+            cameraXRotation.rotation.x = this.val;
+        })
+        .start();
+
+    new TWEEN.Tween({val: 0})
+        .to({val: Math.PI/2}, 6000)
+        .delay(1000)
+        .easing(TWEEN.Easing.Quadratic.InOut) //You can add easing functions simply by chaining them in, as demonstrated here
+        // - there's loads more easing options available - look up TWEEN documentation for this
+        .onUpdate(function() {
+            cameraYRotation.rotation.y = this.val;
+        })
+        .start();
 
     camera.lookAt(new THREE.Vector3(0, 0, 1));
     // vector - A vector representing a position in world space. Rotates the object to face a point in world space.
@@ -143,7 +201,7 @@ function init() {
     var controls = new THREE.OrbitControls(camera, renderer.domElement);
 
 
-    update(renderer, scene, camera, controls);
+    update(renderer, scene, camera, controls, clock);
     // Renders the renderer with a scene and a camera, based on the variable choices above. This allows for the animation to take place by calling the update function below
 
     return scene;
@@ -284,6 +342,8 @@ function getDirectionalLight(intensity) {
     light.shadow.camera.right = 10;
     light.shadow.camera.top = 10;
 
+    light.shadow.mapSize.width = 4096;
+    light.shadow.mapSize.height = 4096;
 
     return light;
 }
@@ -297,32 +357,34 @@ function getAmbientLight(intensity) {
 
 
 // Allows for continuous rendering at 60fps;
-function update(renderer, scene, camera, controls) {
+function update(renderer, scene, camera, controls, clock) {
     renderer.render(
         scene,
         camera
     );
 
-    /*
-    var plane = scene.getObjectByName('plane-1');
-    plane.rotation.y += 1;
+    var timeElapsed = clock.getElapsedTime();
 
-    var box = scene.getObjectByName('box-1');
-    box.rotation.x -= .1;
-    */
-    // These two bits animate the plane and the box.
+
+
+    var cameraZRotation = scene.getObjectByName('cameraZRotation');
+    cameraZRotation.rotation.z = noise.simplex2(timeElapsed * 1.5, timeElapsed * 1.5) * 0.02;
+
+    var boxGrid = scene.getObjectByName('boxGrid');
+    boxGrid.children.forEach(function(child, index) {
+        var x = timeElapsed + index;
+        child.scale.y = (noise.simplex2(x, x) + 1) / 2 + 0.001;
+        child.position.y = child.scale.y/2;
+    });
+
     controls.update();
+    TWEEN.update();
 
     requestAnimationFrame(function() {
-        update(renderer, scene, camera, controls);
+        update(renderer, scene, camera, controls, clock);
     })
 
-
-
 }
-
-
-
 
 
 var scene = init();
